@@ -33,7 +33,7 @@ func createStepsList(crSpec batchv1.AbsurdCISpec) (batchv1.APodExecutionContext,
 	totalStepCommands := 0
 	for _, step := range crSpec.Steps {
 		totalSteps += 1
-		for _, _ = range step.Commands {
+		for range step.Commands {
 			totalStepCommands += 1
 		}
 
@@ -159,26 +159,26 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	}
 
-	// initWorkingDir := corev1.Container{
-	// 	Name:            "init-working-dir",
-	// 	Image:           "sujeshthekkepatt/absurd-ci-node-executor:v1.0.0",
-	// 	Command:         []string{"git", "clone", "https://github.com/sujeshthekkepatt/absurd-ci.git", "workspace/app"},
-	// 	ImagePullPolicy: corev1.PullAlways,
-	// 	VolumeMounts: []corev1.VolumeMount{
-	// 		{
-	// 			MountPath: "/workspace/app",
-	// 			Name:      "working-dir",
-	// 		},
-	// 	},
-	// 	Env: []corev1.EnvVar{
-	// 		{
-	// 			Name:  "GIT_SSH_COMMAND",
-	// 			Value: "ssh -o StrictHostKeyChecking=no",
-	// 		},
-	// 	},
-	// }
+	initWorkingDir := corev1.Container{
+		Name:            "init-working-dir",
+		Image:           "sujeshthekkepatt/absurd-ci-node-executor:v1.0.0",
+		Command:         []string{"git", "clone", "https://github.com/sujeshthekkepatt/absurd-ci.git", "workspace/app"},
+		ImagePullPolicy: corev1.PullAlways,
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				MountPath: "/workspace/app",
+				Name:      "working-dir",
+			},
+		},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "GIT_SSH_COMMAND",
+				Value: "ssh -o StrictHostKeyChecking=no",
+			},
+		},
+	}
 	initContainers := []corev1.Container{}
-	// initContainers = append(initContainers, initWorkingDir)
+	initContainers = append(initContainers, initWorkingDir)
 
 	for _, sCommand := range stepCommands {
 
