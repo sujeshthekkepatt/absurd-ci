@@ -1,0 +1,9 @@
+name: ci-pipeline-test
+version: v1.0.0
+steps:
+    - name: step name
+      executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+      commands:
+        - name: "npm init"
+          command: "npm init"
+      canRunParallel: false

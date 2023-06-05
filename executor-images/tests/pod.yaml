@@ -1,0 +1,80 @@
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: my-pod
+#   namespace: hola
+# spec:
+#   containers:
+#       - name: my-container
+#         image: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+#         command: ["echo","completed"]
+#         # Add any additional container configuration as needed
+#         imagePullPolicy: Always
+#         workingDir: /workspace/app
+#         volumeMounts:
+#           - mountPath: /workspace/app
+#             name: working-dir
+#   initContainers:
+#       - name: init-working-dir
+#         image: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+#         command: ["git", "clone","https://github.com/sujeshthekkepatt/absurd-ci.git","workspace/app"]
+#         imagePullPolicy: Always
+#         volumeMounts:
+#           - mountPath: /workspace/app
+#             name: working-dir
+#         env:
+#           - name: GIT_SSH_COMMAND
+#             value: "ssh -o StrictHostKeyChecking=no"
+#       - name: pi1
+#         image: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+#         command: ["node", "--version"]
+#         imagePullPolicy: Always
+#         workingDir: /workspace/app
+#         volumeMounts:
+#           - mountPath: /workspace/app
+#             name: working-dir
+#       - name: pi2
+#         image: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+#         command: ["npm", "init", "--yes"]
+#         imagePullPolicy: Always
+#         workingDir: /workspace/app
+#         volumeMounts: 
+#           - mountPath: /workspace/app
+#             name: working-dir
+#       - name: pi3
+#         image: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+#         command: ["ls"]
+#         workingDir: /workspace/app
+#         imagePullPolicy: Always
+#         volumeMounts:
+#           - mountPath: /workspace/app
+#             name: working-dir
+#   volumes:
+#     - name: working-dir
+#       persistentVolumeClaim:
+#         claimName: shared-data-pvc
+        
+#   restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod-1
+  namespace: hola
+spec:
+  containers:
+      - name: my-container
+        image: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+        command: ["ls"]
+        # Add any additional container configuration as needed
+        imagePullPolicy: Always
+        workingDir: /workspace/app
+        volumeMounts:
+          - mountPath: /workspace/app
+            name: working-dir
+  volumes:
+    - name: working-dir
+      persistentVolumeClaim:
+        claimName: shared-data-pvc
+        
+  restartPolicy: OnFailure

@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-pods-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods","pods/log"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-pods-reader-binding
+subjects:
+- kind: ServiceAccount
+  name: cluster-reader
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: cluster-pods-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: robot-pod
+spec:
+  serviceAccountName: cluster-reader
+  containers:
+      - name: status-updater
+        image: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+        command: ["node","/usr/local/bin/log.js"]
+        args:
+          - "hola"
+          - "mystep"
+          - "my-pod"
+          - "absurdci-sujesh"
+        imagePullPolicy: Always
+        volumeMounts:
+          - mountPath: /var/log
+            name: varlog
+      - name: log-retriever
+        image: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+        command: ["node","/usr/local/bin/log.js"]
+        args:
+          - "hola"
+          - "mystep"
+          - "my-pod"
+          - "absurdci-sujesh"
+        imagePullPolicy: Always
+        volumeMounts:
+          - mountPath: /var/log
+            name: varlog
+  automountServiceAccountToken: true
+  volumes:
+    - name: varlog
+      emptyDir: {}
+        
+  restartPolicy: OnFailure
