@@ -46,9 +46,9 @@ func (s *Scheduler) TopoSort(stepName string, stack *list.List, visited map[stri
 
 }
 
-func (s *Scheduler) Schedule() []string {
+func (s *Scheduler) Schedule() *list.List {
 
-	var scheduleOrder []string
+	scheduleOrder := list.New()
 
 	visited := make(map[string]bool)
 
@@ -73,10 +73,25 @@ func (s *Scheduler) Schedule() []string {
 		val := stack.Back()
 
 		stackItem := val.Value.(string)
-		scheduleOrder = append(scheduleOrder, stackItem)
+
+		scheduleOrder.PushBack(stackItem)
 
 		stack.Remove(val)
 	}
 
 	return scheduleOrder
+}
+
+func GetNext(currentStep string, l *list.List) string {
+
+	for e := l.Front(); e != nil; {
+
+		if e.Value == currentStep && e.Next() != nil {
+
+			return e.Next().Value.(string)
+		}
+		e = e.Next()
+
+	}
+	return ""
 }
