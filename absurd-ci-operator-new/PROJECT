@@ -5,7 +5,7 @@
 domain: api.absurd-ci.xyz
 layout:
 - go.kubebuilder.io/v4
-projectName: absurd-ci-operator
+projectName: absurd-ci-operator-new
 repo: github.com/sujeshthekkepatt/absurd-ci
 resources:
 - api:
@@ -18,5 +18,3 @@ resources:
   path: github.com/sujeshthekkepatt/absurd-ci/api/v1
   version: v1
 version: "3"
-
-kubebuilder create api --group batch --version v1 --kind AbsurdCI
