@@ -1,0 +1,39 @@
+apiVersion: batch.api.absurd-ci.xyz/v1
+kind: AbsurdCI
+metadata:
+  labels:
+    app.kubernetes.io/name: absurdci
+    app.kubernetes.io/instance: absurdci-sample
+    app.kubernetes.io/part-of: absurd-ci-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: absurd-ci-operator
+  name: absurdci-sujesh
+  namespace: absurdci-test
+spec:
+  # TODO(user): Add fields here
+  name: ci-pipeline-test-1
+  version: v1.0.0
+  steps:
+      - name: stepname
+        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+        commands:
+          - name: "init"
+            command: "npm"
+            args:
+              - "init --yes"
+          - name: "version"
+            command: "node"
+            args:
+              - "--version"
+      - name: stepname2
+        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+        commands:
+          - name: "init"
+            command: "npm"
+            args:
+              - "init --yes"
+          - name: "version"
+            command: "node"
+            args:
+              - "--version"
+        # canRunParallel: false

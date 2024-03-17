@@ -1,0 +1,31 @@
+# permissions for end users to edit absurdcis.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: absurdci-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: absurd-ci-operator-new
+    app.kubernetes.io/part-of: absurd-ci-operator-new
+    app.kubernetes.io/managed-by: kustomize
+  name: absurdci-editor-role
+rules:
+- apiGroups:
+  - batch.api.absurd-ci.xyz
+  resources:
+  - absurdcis
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch.api.absurd-ci.xyz
+  resources:
+  - absurdcis/status
+  verbs:
+  - get
