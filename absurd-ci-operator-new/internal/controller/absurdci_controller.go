@@ -58,6 +58,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, absurdCIconfig)
 
+	// todo handle errors properly using kubernetes errors package
 	if err != nil {
 
 		fmt.Println("Error occured", err)
