@@ -3,11 +3,14 @@ package controller
 import (
 	"context"
 	"fmt"
+	"log"
 
 	batchv1 "github.com/sujeshthekkepatt/absurd-ci/api/v1"
 	corev1 "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -252,23 +255,41 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 func InitPVC(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Request, cr *batchv1.AbsurdCI) error {
 
 	pvcName := fmt.Sprintf("pvc-%s", cr.Name)
-	pvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      pvcName,
-			Namespace: cr.Namespace,
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-			Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")}},
-		},
-	}
 
-	err := r.Create(ctx, pvc)
+	pvc := &corev1.PersistentVolumeClaim{}
 
-	//todo handle pvc already exist scenario
+	err := r.Get(ctx, types.NamespacedName{Namespace: cr.Namespace, Name: pvcName}, pvc)
 	if err != nil {
 
-		return err
+		if kubeerrors.IsNotFound(err) {
+
+			log.Println("PVC not exists. Creating a PVC")
+			pvc := &corev1.PersistentVolumeClaim{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      pvcName,
+					Namespace: cr.Namespace,
+				},
+				Spec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")}},
+				},
+			}
+
+			err := r.Create(ctx, pvc)
+			if err != nil {
+
+				log.Println("error while creating PVC", err)
+				return err
+			}
+		} else {
+
+			fmt.Println("Error while getting PVC", err)
+			return err
+
+		}
+	} else {
+		log.Println("PVC exists. Skipping PVC creation")
+
 	}
 
 	cr.Status.PVCName = pvcName
