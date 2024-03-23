@@ -30,6 +30,9 @@ type AStep struct {
 	Name     string     `json:"name"`
 	Executor string     `json:"executor"`
 	Commands []ACommand `json:"commands"`
+	RunAfter string     `json:"runAfter"`
+	// +kubebuilder:validation:Optional
+	Order int `json:"order"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -44,6 +47,8 @@ type AbsurdCISpec struct {
 	Name    string  `json:"name,omitempty"`
 	Version string  `json:"version,omitempty"`
 	Steps   []AStep `json:"steps,omitempty"`
+	// +kubebuilder:validation:Optional
+	Dag []string `json:"dagRepresentation"`
 }
 
 type ACommandStatus struct {
@@ -58,7 +63,7 @@ type ACommandRan struct {
 }
 
 type APodExecutionContext struct {
-	CurrentStepName             string  `json:"currentStepName"`
+	CurrentStep                 AStep   `json:"currentStep"`
 	Steps                       []AStep `json:"steps"`
 	TotalNumberOfTasks          int     `json:"totalNumberOfTasks"`
 	TotalNumberOfSteps          int     `json:"totalNumberOfSteps"`

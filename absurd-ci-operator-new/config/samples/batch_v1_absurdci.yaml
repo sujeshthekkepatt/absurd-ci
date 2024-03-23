@@ -20,20 +20,64 @@ spec:
           - name: "init"
             command: "npm"
             args:
-              - "init --yes"
+              - "init"
+              - "--yes"
           - name: "version"
             command: "node"
             args:
               - "--version"
+        runAfter: ""
       - name: stepname2
         executor: sujeshthekkepatt/absurd-ci-node-executor:latest
         commands:
           - name: "init"
             command: "npm"
             args:
-              - "init --yes"
+              - "init"
+              - "--yes"
           - name: "version"
             command: "node"
             args:
               - "--version"
+        runAfter: ""
+      - name: stepname3
+        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+        commands:
+          - name: "init"
+            command: "npm"
+            args:
+              - "init"
+              - "--yes"
+
+          - name: "version"
+            command: "node"
+            args:
+              - "--version"
+        runAfter: ""
+      - name: stepname4
+        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+        commands:
+          - name: "init"
+            command: "npm"
+            args:
+              - "init"
+              - "--yes"
+          - name: "version"
+            command: "node"
+            args:
+              - "--version"
+        runAfter: ""
+      - name: stepname5
+        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+        commands:
+          - name: "init"
+            command: "npm"
+            args:
+              - "init"
+              - "--yes"
+          - name: "version"
+            command: "node"
+            args:
+              - "--version"
+        runAfter: stepname3
         # canRunParallel: false
