@@ -86,6 +86,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, nil
 
 		}
+
 		err = r.Status().Update(ctx, absurdCIconfig)
 
 		if err != nil {
@@ -108,9 +109,9 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		fmt.Println("Going to init pod creation")
 
-		needUpdate := CreateStepPodCreationInfo(absurdCIconfig.Status.APodExecutionContextInfo.CurrentStepName, absurdCIconfig)
+		needUpdate := CreateStepPodCreationInfo(absurdCIconfig.Status.APodExecutionContextInfo.CurrentStep, absurdCIconfig)
 
-		fmt.Println("statuses", absurdCIconfig.Status.APodExecutionContextInfo)
+		fmt.Println("statuses", absurdCIconfig.Status.APodExecutionContextInfo.Steps)
 
 		// currently everything will be running on a single pod as init container
 		if needUpdate {
