@@ -242,10 +242,41 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	stepContainers := []corev1.Container{}
 
+	var envFrom corev1.EnvFromSource
+	var volumeFromEnv corev1.Volume
+
+	if currentStep.SecretName != "" {
+		envFrom = corev1.EnvFromSource{
+			SecretRef: &corev1.SecretEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: currentStep.SecretName,
+				},
+			},
+		}
+
+		volumeFromEnv = corev1.Volume{
+			Name: "my-secret-volume", // Name of the volume. This should be accept from AbsurdCI Spec
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: currentStep.SecretName, // Name of the Secret to mount
+					Items: []corev1.KeyToPath{
+						{
+							Key:  ".dockerconfigjson",
+							Path: "config.json",
+						},
+					},
+				},
+			},
+		}
+	} else {
+		fmt.Println("no secret. no env")
+	}
+
 	//each step command ran as a container in the pod. Ideally each step should contain a single command
 	for _, sCommand := range stepCommands {
 		fmt.Println("scommand", sCommand.Command)
 		var container corev1.Container
+
 		if sCommand.Command == "" {
 
 			container = corev1.Container{
@@ -259,12 +290,22 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 						MountPath: "/workspace/app",
 						Name:      "working-dir",
 					},
+
+					{
+						MountPath: "/kaniko/.docker",  // should read from absurd spec
+						Name:      "my-secret-volume", // this should be from AbsurdCI  spec
+					},
 				},
+				EnvFrom: []corev1.EnvFromSource{envFrom},
 				Env: []corev1.EnvVar{
 					{
 						Name:  "GIT_SSH_COMMAND",
 						Value: "ssh -o StrictHostKeyChecking=no",
 					},
+					// {
+					// 	Name:  "DOCKER_CONFIG",
+					// 	Value: "/workspace/app/secrets",
+					// },
 				},
 			}
 		} else {
@@ -281,12 +322,21 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 						MountPath: "/workspace/app",
 						Name:      "working-dir",
 					},
+					{
+						MountPath: "/kaniko/.docker",
+						Name:      "my-secret-volume", // this should be from AbsurdCI  spec
+					},
 				},
+				EnvFrom: []corev1.EnvFromSource{envFrom},
 				Env: []corev1.EnvVar{
 					{
 						Name:  "GIT_SSH_COMMAND",
 						Value: "ssh -o StrictHostKeyChecking=no",
 					},
+					// {
+					// 	Name:  "DOCKER_CONFIG",
+					// 	Value: "/workspace/app/secrets",
+					// },
 				},
 			}
 		}
@@ -325,7 +375,9 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 					ClaimName: ciConfig.Status.PVCName,
 				}},
-			}},
+			},
+				volumeFromEnv,
+			},
 			// InitContainers: initContainers,
 
 			Containers:    stepContainers,

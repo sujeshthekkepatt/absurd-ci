@@ -34,6 +34,8 @@ type AStep struct {
 	RunAfter string     `json:"runAfter"`
 	// +kubebuilder:validation:Optional
 	Order int `json:"order"`
+	// +kubebuilder:validation:Optional
+	SecretName string `json:"secretName"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

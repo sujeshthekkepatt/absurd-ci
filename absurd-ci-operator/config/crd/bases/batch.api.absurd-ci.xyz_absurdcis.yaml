@@ -70,6 +70,8 @@ spec:
                       type: integer
                     runAfter:
                       type: string
+                    secretName:
+                      type: string
                   required:
                   - commands
                   - executor
@@ -111,6 +113,8 @@ spec:
                         type: integer
                       runAfter:
                         type: string
+                      secretName:
+                        type: string
                     required:
                     - commands
                     - executor
@@ -143,6 +147,8 @@ spec:
                         order:
                           type: integer
                         runAfter:
+                          type: string
+                        secretName:
                           type: string
                       required:
                       - commands
@@ -229,6 +235,8 @@ spec:
                     order:
                       type: integer
                     runAfter:
+                      type: string
+                    secretName:
                       type: string
                   required:
                   - commands
