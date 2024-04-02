@@ -91,7 +91,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		if err != nil {
 
-			fmt.Println(err)
+			fmt.Println("error while updating status", err)
 			return ctrl.Result{}, nil
 
 		}
@@ -109,21 +109,23 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		fmt.Println("Going to init pod creation")
 
-		needUpdate := CreateStepPodCreationInfo(absurdCIconfig.Status.APodExecutionContextInfo.CurrentStep, absurdCIconfig)
+		for {
 
-		fmt.Println("statuses", absurdCIconfig.Status.APodExecutionContextInfo.Steps)
+			needUpdate := CreateStepPodCreationInfo(r, ctx, absurdCIconfig.Status.APodExecutionContextInfo.CurrentStep, absurdCIconfig)
 
-		// currently everything will be running on a single pod as init container
-		if needUpdate {
+			fmt.Println("need update is", needUpdate)
+			// currently everything will be running on a single pod as init container
+			if needUpdate {
 
-			CreateWorkerPod(r, ctx, req, absurdCIconfig)
-			err := r.Status().Update(ctx, absurdCIconfig)
+				CreateWorkerPod(r, ctx, req, absurdCIconfig)
+				err := r.Status().Update(ctx, absurdCIconfig)
 
-			if err != nil {
+				if err != nil {
 
-				fmt.Println(err)
+					fmt.Println(err)
+				}
+				fmt.Println("Test Pod Created")
 			}
-			fmt.Println("Test Pod Created")
 		}
 
 	}

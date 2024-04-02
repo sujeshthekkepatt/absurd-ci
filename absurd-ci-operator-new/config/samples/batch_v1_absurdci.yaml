@@ -8,76 +8,29 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: absurd-ci-operator
   name: absurdci-sujesh
-  namespace: absurdci-test
+  namespace: test
 spec:
   # TODO(user): Add fields here
   name: ci-pipeline-test-1
   version: v1.0.0
   steps:
-      - name: stepname
-        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
-        commands:
-          - name: "init"
-            command: "npm"
-            args:
-              - "init"
-              - "--yes"
-          - name: "version"
-            command: "node"
-            args:
-              - "--version"
-        runAfter: ""
-      - name: stepname2
-        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
-        commands:
-          - name: "init"
-            command: "npm"
-            args:
-              - "init"
-              - "--yes"
-          - name: "version"
-            command: "node"
-            args:
-              - "--version"
-        runAfter: ""
-      - name: stepname3
-        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
-        commands:
-          - name: "init"
-            command: "npm"
-            args:
-              - "init"
-              - "--yes"
-
-          - name: "version"
-            command: "node"
-            args:
-              - "--version"
-        runAfter: ""
-      - name: stepname4
-        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
-        commands:
-          - name: "init"
-            command: "npm"
-            args:
-              - "init"
-              - "--yes"
-          - name: "version"
-            command: "node"
-            args:
-              - "--version"
-        runAfter: ""
-      - name: stepname5
-        executor: sujeshthekkepatt/absurd-ci-node-executor:latest
-        commands:
-          - name: "init"
-            command: "npm"
-            args:
-              - "init"
-              - "--yes"
-          - name: "version"
-            command: "node"
-            args:
-              - "--version"
-        runAfter: stepname3
-        # canRunParallel: false
+    - name: kaniko
+      executor: gcr.io/kaniko-project/executor:latest
+      commands:
+        - name: "kaniko"
+          args:
+            - "--dockerfile=workspace/app/absurd-ci-operator-new/Dockerfile"
+            - "--context=workspace/app/absurd-ci-operator-new"
+            - "--destination=sujeshthekkepatt/absurd-ci-controller:kaniko"
+      runAfter: initdir
+    - name: initdir
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "init"
+          command: "git"
+          args:
+            - "clone"
+            - "https://github.com/sujeshthekkepatt/absurd-ci.git"
+            - "workspace/app"
+      runAfter: ""
+      # canRunParallel: false

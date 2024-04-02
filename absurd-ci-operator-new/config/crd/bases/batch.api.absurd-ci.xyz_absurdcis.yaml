@@ -39,10 +39,6 @@ spec:
           spec:
             description: AbsurdCISpec defines the desired state of AbsurdCI
             properties:
-              dagRepresentation:
-                items:
-                  type: string
-                type: array
               name:
                 description: Foo is an example field of AbsurdCI. Edit absurdci_types.go
                   to remove/update
@@ -63,7 +59,6 @@ spec:
                             type: string
                         required:
                         - args
-                        - command
                         - name
                         type: object
                       type: array
@@ -105,7 +100,6 @@ spec:
                               type: string
                           required:
                           - args
-                          - command
                           - name
                           type: object
                         type: array
@@ -139,7 +133,6 @@ spec:
                                 type: string
                             required:
                             - args
-                            - command
                             - name
                             type: object
                           type: array
@@ -210,6 +203,40 @@ spec:
                 type: object
               crName:
                 type: string
+              dag:
+                items:
+                  properties:
+                    commands:
+                      items:
+                        properties:
+                          args:
+                            items:
+                              type: string
+                            type: array
+                          command:
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - args
+                        - name
+                        type: object
+                      type: array
+                    executor:
+                      type: string
+                    name:
+                      type: string
+                    order:
+                      type: integer
+                    runAfter:
+                      type: string
+                  required:
+                  - commands
+                  - executor
+                  - name
+                  - runAfter
+                  type: object
+                type: array
               isPipelineStarted:
                 description: |-
                   INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -223,6 +250,7 @@ spec:
             - apodExecutionContextInfo
             - astepPodCreationInfo
             - crName
+            - dag
             - isPipelineStarted
             - namespace
             - pvcName

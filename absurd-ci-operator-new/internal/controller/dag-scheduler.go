@@ -50,10 +50,10 @@ func OrderSteps(ciConfig *batchv1.AbsurdCI) error {
 
 	}
 
-	ciConfig.Spec.Steps = orderedAsteps
-	fmt.Println("spec steps", ciConfig.Spec.Steps)
+	// ciConfig.Spec.Steps = orderedAsteps
+	// fmt.Println("spec steps", ciConfig.Spec.Steps)
 
-	ciConfig.Spec.Dag = orderedSteps
+	ciConfig.Status.Dag = orderedAsteps
 	return nil
 
 }

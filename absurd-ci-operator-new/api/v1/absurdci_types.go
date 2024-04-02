@@ -21,7 +21,8 @@ import (
 )
 
 type ACommand struct {
-	Name    string   `json:"name"`
+	Name string `json:"name"`
+	// +kubebuilder:validation:Optional
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
 }
@@ -47,8 +48,6 @@ type AbsurdCISpec struct {
 	Name    string  `json:"name,omitempty"`
 	Version string  `json:"version,omitempty"`
 	Steps   []AStep `json:"steps,omitempty"`
-	// +kubebuilder:validation:Optional
-	Dag []string `json:"dagRepresentation"`
 }
 
 type ACommandStatus struct {
@@ -95,6 +94,7 @@ type AbsurdCIStatus struct {
 	CRName                   string                  `json:"crName"`
 	Namespace                string                  `json:"namespace"`
 	PVCName                  string                  `json:"pvcName"`
+	Dag                      []AStep                 `json:"dag"`
 }
 
 //+kubebuilder:object:root=true

@@ -1,0 +1,76 @@
+apiVersion: batch.api.absurd-ci.xyz/v1
+kind: AbsurdCI
+metadata:
+  labels:
+    app.kubernetes.io/name: absurdci
+    app.kubernetes.io/instance: absurdci-sample
+    app.kubernetes.io/part-of: absurd-ci-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: absurd-ci-operator
+  name: absurdci-sujesh
+  namespace: test
+spec:
+  # TODO(user): Add fields here
+  name: ci-pipeline-test-1
+  version: v1.0.0
+  steps:
+    - name: stepname
+      executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+      commands:
+        - name: "init"
+          command: "echo"
+          args:
+            - "init"
+      runAfter: "initdir"
+    - name: stepname2
+      executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+      commands:
+        - name: "init"
+          command: "echo"
+          args:
+            - "stepname2"
+        - name: "version"
+          command: "echo"
+          args:
+            - "version"
+      runAfter: "initdir"
+    - name: stepname3
+      executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+      commands:
+        - name: "init"
+          command: "echo"
+          args:
+            - "stepname3"
+
+        - name: "version"
+          command: "echo"
+          args:
+            - "version from stepname3"
+      runAfter: "initdir"
+    - name: stepname4
+      executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+      commands:
+        - name: "init"
+          command: "echo"
+          args:
+            - "stepname4"
+      runAfter: "initdir"
+    - name: stepname5
+      executor: sujeshthekkepatt/absurd-ci-node-executor:latest
+      commands:
+        - name: "init"
+          command: "echo"
+          args:
+            - "stp5"
+      runAfter: stepname3
+    - name: initdir
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "init"
+          command: "git"
+          args:
+            - "clone"
+            - "https://github.com/sujeshthekkepatt/absurd-ci.git"
+            - "workspace/app"
+      runAfter: ""
+      # canRunParallel: false
