@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/instance: absurdci-viewer-role
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: absurd-ci-operator
-    app.kubernetes.io/part-of: absurd-ci-operator
+    app.kubernetes.io/created-by: absurd-ci-operator-new
+    app.kubernetes.io/part-of: absurd-ci-operator-new
     app.kubernetes.io/managed-by: kustomize
   name: absurdci-viewer-role
 rules:

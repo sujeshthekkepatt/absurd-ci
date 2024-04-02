@@ -58,6 +58,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, absurdCIconfig)
 
+	// todo handle errors properly using kubernetes errors package
 	if err != nil {
 
 		fmt.Println("Error occured", err)
@@ -85,11 +86,12 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{}, nil
 
 		}
+
 		err = r.Status().Update(ctx, absurdCIconfig)
 
 		if err != nil {
 
-			fmt.Println(err)
+			fmt.Println("error while updating status", err)
 			return ctrl.Result{}, nil
 
 		}
@@ -107,18 +109,23 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		fmt.Println("Going to init pod creation")
 
-		needUpdate := CreateStepPodCreationInfo(absurdCIconfig.Status.APodExecutionContextInfo.CurrentStepName, &absurdCIconfig.Status)
+		for {
 
-		if needUpdate {
+			needUpdate := CreateStepPodCreationInfo(r, ctx, absurdCIconfig.Status.APodExecutionContextInfo.CurrentStep, absurdCIconfig)
 
-			CreateWorkerPod(r, ctx, req, absurdCIconfig)
-			err := r.Status().Update(ctx, absurdCIconfig)
+			fmt.Println("need update is", needUpdate)
+			// currently everything will be running on a single pod as init container
+			if needUpdate {
 
-			if err != nil {
+				CreateWorkerPod(r, ctx, req, absurdCIconfig)
+				err := r.Status().Update(ctx, absurdCIconfig)
 
-				fmt.Println(err)
+				if err != nil {
+
+					fmt.Println(err)
+				}
+				fmt.Println("Test Pod Created")
 			}
-			fmt.Println("Test Pod Created")
 		}
 
 	}

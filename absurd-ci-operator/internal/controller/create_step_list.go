@@ -3,11 +3,14 @@ package controller
 import (
 	"context"
 	"fmt"
+	"log"
 
 	batchv1 "github.com/sujeshthekkepatt/absurd-ci/api/v1"
 	corev1 "k8s.io/api/core/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -15,13 +18,24 @@ func InitSpecAndStatus(cr *batchv1.AbsurdCI) (*batchv1.AbsurdCI, error) {
 
 	cr.Status.CRName = cr.Name
 	cr.Status.IsPipelineStarted = true
-	cr.Status.APodExecutionContextInfo, _ = createStepsList(cr.Spec)
+
+	err := OrderSteps(cr)
+
+	fmt.Println("DAG", cr.Status.Dag)
+
+	if err != nil {
+		fmt.Println("error occured while performing ordering")
+
+		return nil, err
+	}
+
+	cr.Status.APodExecutionContextInfo, _ = createStepsList(cr)
 	cr.Status.AStepPodCreationInfo = make(map[string]batchv1.AStepPodInfo)
 
 	return cr, nil
 }
 
-func createStepsList(crSpec batchv1.AbsurdCISpec) (batchv1.APodExecutionContext, error) {
+func createStepsList(crSpec *batchv1.AbsurdCI) (batchv1.APodExecutionContext, error) {
 
 	stepList := []batchv1.AStep{}
 
@@ -31,17 +45,21 @@ func createStepsList(crSpec batchv1.AbsurdCISpec) (batchv1.APodExecutionContext,
 
 	totalSteps := 0
 	totalStepCommands := 0
-	for _, step := range crSpec.Steps {
+	var initStep batchv1.AStep
+	for _, step := range crSpec.Spec.Steps {
 		totalSteps += 1
 		for range step.Commands {
 			totalStepCommands += 1
 		}
 
+		if step.Order == 0 {
+			initStep = step
+		}
+
 		stepList = append(stepList, step)
 	}
-	initStep := stepList[0]
 
-	podContext.CurrentStepName = initStep.Name
+	podContext.CurrentStep = initStep
 	podContext.Steps = stepList
 	podContext.TotalExecutionTime = "nil"
 	podContext.TotalNumberOfSteps = totalSteps
@@ -50,24 +68,25 @@ func createStepsList(crSpec batchv1.AbsurdCISpec) (batchv1.APodExecutionContext,
 	return podContext, nil
 }
 
-func getNextItem(currentStep string, crSteps []batchv1.AStep) batchv1.AStep {
+func getNextItem(currentStep batchv1.AStep, crSteps []batchv1.AStep) batchv1.AStep {
 
 	var currentStepPosition int
+	var nextStep batchv1.AStep
 	for position, element := range crSteps {
 
-		if element.Name == currentStep {
+		if element.Order == currentStep.Order+1 {
 			currentStepPosition = position
+			nextStep = element
 			break
 		}
 	}
 
-	if currentStepPosition == len(crSteps)-1 {
+	if currentStepPosition == len(crSteps) {
 
 		return batchv1.AStep{}
 	}
-	nextStep := crSteps[currentStepPosition+1]
-
 	return nextStep
+
 }
 
 func getCurrentItem(currentStep string, crSteps []batchv1.AStep) batchv1.AStep {
@@ -86,41 +105,77 @@ func getCurrentItem(currentStep string, crSteps []batchv1.AStep) batchv1.AStep {
 	return nextStep
 }
 
-// currentStep is actually nextStep
-func CreateStepPodCreationInfo(currentStep string, cr *batchv1.AbsurdCIStatus) bool {
+func getPodStatus(r *AbsurdCIReconciler, ctx context.Context, cr *batchv1.AbsurdCI, podName string) (corev1.PodStatus, error) {
 
-	podInfo, exists := cr.AStepPodCreationInfo[currentStep]
+	pod := &corev1.Pod{}
+	err := r.Get(ctx, types.NamespacedName{Namespace: cr.Namespace, Name: podName}, pod)
+
+	if err != nil {
+		fmt.Println("error getting pod sttaus", err)
+		return pod.Status, err
+	}
+
+	return pod.Status, nil
+}
+
+// currentStep is actually nextStep
+func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, currentStep batchv1.AStep, cr *batchv1.AbsurdCI) bool {
+
+	podInfo, exists := cr.Status.AStepPodCreationInfo[currentStep.Name]
+
+	fmt.Println("getting pod info", podInfo, exists)
 
 	if exists {
 
-		if (podInfo.PodStatus == "Running") || (podInfo.PodStatus == "Pending") {
+		// fmt.Println("from pod creation info", podInfo, exists, cr.Status.AStepPodCreationInfo, currentStep)
 
-			fmt.Printf("The Step:%s/pod is still running. No need to run the next step. Wait for the update", currentStep)
+		fmt.Println("getting pod status of", podInfo.PodName)
+		status, err := getPodStatus(r, ctx, cr, podInfo.PodName)
+
+		if err != nil {
+			if kubeerrors.IsNotFound(err) {
+
+				return true
+			}
+
+			fmt.Println("error getting pod status")
 			return false
-		} else {
+		}
+
+		fmt.Println("pod status ", status.Phase, podInfo.PodName)
+
+		if (status.Phase == "Running") || (status.Phase == "Pending") {
+
+			fmt.Printf("The Step:%s/pod is still running. No need to run the next step. Wait for the update", currentStep.Name)
+			return false
+		} else if status.Phase == "Succeeded" {
 
 			fmt.Println("Create and schedule new Step/Pod")
-			step := getNextItem(currentStep, cr.APodExecutionContextInfo.Steps)
-
+			step := getNextItem(currentStep, cr.Status.Dag)
+			fmt.Println("nextstep", step)
 			if step.Name != "" {
-				cr.AStepPodCreationInfo[step.Name] = batchv1.AStepPodInfo{
+				cr.Status.AStepPodCreationInfo[step.Name] = batchv1.AStepPodInfo{
 					PodName:        fmt.Sprintf("task-pod-%s", step.Name),
 					ConatinerNames: []batchv1.AContainerNames{},
 					PodStatus:      "Pending",
 				}
-				cr.APodExecutionContextInfo.CurrentStepName = step.Name
+				cr.Status.APodExecutionContextInfo.CurrentStep = step
 				return true
 			}
+			return false
+		} else {
+			fmt.Println("status is down", status.Phase)
 			return false
 		}
 	} else {
 
 		fmt.Println("Voila we need to start the  step")
 
-		step := getCurrentItem(currentStep, cr.APodExecutionContextInfo.Steps)
-		cr.APodExecutionContextInfo.CurrentStepName = step.Name
+		step := getCurrentItem(currentStep.Name, cr.Status.APodExecutionContextInfo.Steps)
+		cr.Status.APodExecutionContextInfo.CurrentStep = step
 
-		cr.AStepPodCreationInfo[step.Name] = batchv1.AStepPodInfo{
+		fmt.Println("current step  and order is", step.Name, step.Order)
+		cr.Status.AStepPodCreationInfo[step.Name] = batchv1.AStepPodInfo{
 			PodName:        fmt.Sprintf("task-pod-%s", step.Name),
 			ConatinerNames: []batchv1.AContainerNames{},
 			PodStatus:      "Pending",
@@ -145,13 +200,17 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	 */
 
+	fmt.Println("from create worker pod")
+
 	var stepCommands []batchv1.ACommand
 
-	currentStep := ciConfig.Status.APodExecutionContextInfo.CurrentStepName
+	currentStep := ciConfig.Status.APodExecutionContextInfo.CurrentStep
+
+	// We don't need a loop here.
 
 	for _, step := range ciConfig.Spec.Steps {
 
-		if step.Name == currentStep {
+		if step.Name == currentStep.Name {
 
 			stepCommands = append(stepCommands, step.Commands...)
 			break
@@ -159,6 +218,7 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	}
 
+	// this container will throw error if the mount path already exists and if not empty
 	initWorkingDir := corev1.Container{
 		Name:            "init-working-dir",
 		Image:           "sujeshthekkepatt/absurd-ci-node-executor:v1.0.0",
@@ -180,34 +240,81 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 	initContainers := []corev1.Container{}
 	initContainers = append(initContainers, initWorkingDir)
 
-	for _, sCommand := range stepCommands {
+	stepContainers := []corev1.Container{}
 
-		container := corev1.Container{
-			Name:            fmt.Sprintf("%s-%s", sCommand.Name, ciConfig.Name),
-			Image:           "sujeshthekkepatt/absurd-ci-node-executor:v1.0.0",
-			Command:         []string{sCommand.Command},
-			Args:            sCommand.Args,
-			ImagePullPolicy: corev1.PullAlways,
-			WorkingDir:      "/workspace/app",
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					MountPath: "/workspace/app",
-					Name:      "working-dir",
+	//each step command ran as a container in the pod. Ideally each step should contain a single command
+	for _, sCommand := range stepCommands {
+		fmt.Println("scommand", sCommand.Command)
+		var container corev1.Container
+		if sCommand.Command == "" {
+
+			container = corev1.Container{
+				Name:            fmt.Sprintf("%s-%s", sCommand.Name, ciConfig.Name),
+				Image:           currentStep.Executor,
+				Args:            sCommand.Args,
+				ImagePullPolicy: corev1.PullAlways,
+				WorkingDir:      "/workspace/app",
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						MountPath: "/workspace/app",
+						Name:      "working-dir",
+					},
 				},
-			},
-			Env: []corev1.EnvVar{
-				{
-					Name:  "GIT_SSH_COMMAND",
-					Value: "ssh -o StrictHostKeyChecking=no",
+				Env: []corev1.EnvVar{
+					{
+						Name:  "GIT_SSH_COMMAND",
+						Value: "ssh -o StrictHostKeyChecking=no",
+					},
 				},
-			},
+			}
+		} else {
+
+			container = corev1.Container{
+				Name:            fmt.Sprintf("%s-%s", sCommand.Name, ciConfig.Name),
+				Image:           currentStep.Executor,
+				Command:         []string{sCommand.Command},
+				Args:            sCommand.Args,
+				ImagePullPolicy: corev1.PullAlways,
+				WorkingDir:      "/workspace/app",
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						MountPath: "/workspace/app",
+						Name:      "working-dir",
+					},
+				},
+				Env: []corev1.EnvVar{
+					{
+						Name:  "GIT_SSH_COMMAND",
+						Value: "ssh -o StrictHostKeyChecking=no",
+					},
+				},
+			}
 		}
-		initContainers = append(initContainers, container)
+
+		fmt.Println("container is", container)
+		stepContainers = append(stepContainers, container)
 	}
+
+	// this executor container should poll statuses of the step containers
+	nodeExecutorContiner := corev1.Container{
+		Name:            fmt.Sprintf("consolidate-log-%s", ciConfig.Spec.Name),
+		Image:           "sujeshthekkepatt/absurd-ci-node-executor:v1.0.0",
+		Command:         []string{"echo", "tasks are all ran"},
+		ImagePullPolicy: corev1.PullAlways,
+		WorkingDir:      "/workspace/app",
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				MountPath: "/workspace/app",
+				Name:      "working-dir",
+			},
+		},
+	}
+
+	stepContainers = append(stepContainers, nodeExecutorContiner)
 
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      ciConfig.Status.AStepPodCreationInfo[currentStep].PodName,
+			Name:      ciConfig.Status.AStepPodCreationInfo[currentStep.Name].PodName,
 			Namespace: ciConfig.Namespace,
 		},
 
@@ -219,22 +326,10 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 					ClaimName: ciConfig.Status.PVCName,
 				}},
 			}},
-			InitContainers: initContainers,
+			// InitContainers: initContainers,
 
-			Containers: []corev1.Container{{
-				Name:            fmt.Sprintf("consolidate-log-%s", ciConfig.Spec.Name),
-				Image:           "sujeshthekkepatt/absurd-ci-node-executor:v1.0.0",
-				Command:         []string{"echo", "tasks are all ran"},
-				ImagePullPolicy: corev1.PullAlways,
-				WorkingDir:      "/workspace/app",
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						MountPath: "/workspace/app",
-						Name:      "working-dir",
-					},
-				},
-			}},
-			RestartPolicy: corev1.RestartPolicyOnFailure,
+			Containers:    stepContainers,
+			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}
 	err := r.Create(ctx, pod)
@@ -250,22 +345,41 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 func InitPVC(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Request, cr *batchv1.AbsurdCI) error {
 
 	pvcName := fmt.Sprintf("pvc-%s", cr.Name)
-	pvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      pvcName,
-			Namespace: cr.Namespace,
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-			Resources:   corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")}},
-		},
-	}
 
-	err := r.Create(ctx, pvc)
+	pvc := &corev1.PersistentVolumeClaim{}
 
+	err := r.Get(ctx, types.NamespacedName{Namespace: cr.Namespace, Name: pvcName}, pvc)
 	if err != nil {
 
-		return err
+		if kubeerrors.IsNotFound(err) {
+
+			log.Println("PVC not exists. Creating a PVC")
+			pvc := &corev1.PersistentVolumeClaim{
+				ObjectMeta: v1.ObjectMeta{
+					Name:      pvcName,
+					Namespace: cr.Namespace,
+				},
+				Spec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse("1Gi")}},
+				},
+			}
+
+			err := r.Create(ctx, pvc)
+			if err != nil {
+
+				log.Println("error while creating PVC", err)
+				return err
+			}
+		} else {
+
+			fmt.Println("Error while getting PVC", err)
+			return err
+
+		}
+	} else {
+		log.Println("PVC exists. Skipping PVC creation")
+
 	}
 
 	cr.Status.PVCName = pvcName

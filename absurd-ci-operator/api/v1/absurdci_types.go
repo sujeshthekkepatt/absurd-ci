@@ -21,7 +21,8 @@ import (
 )
 
 type ACommand struct {
-	Name    string   `json:"name"`
+	Name string `json:"name"`
+	// +kubebuilder:validation:Optional
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
 }
@@ -30,6 +31,9 @@ type AStep struct {
 	Name     string     `json:"name"`
 	Executor string     `json:"executor"`
 	Commands []ACommand `json:"commands"`
+	RunAfter string     `json:"runAfter"`
+	// +kubebuilder:validation:Optional
+	Order int `json:"order"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -58,7 +62,7 @@ type ACommandRan struct {
 }
 
 type APodExecutionContext struct {
-	CurrentStepName             string  `json:"currentStepName"`
+	CurrentStep                 AStep   `json:"currentStep"`
 	Steps                       []AStep `json:"steps"`
 	TotalNumberOfTasks          int     `json:"totalNumberOfTasks"`
 	TotalNumberOfSteps          int     `json:"totalNumberOfSteps"`
@@ -90,6 +94,7 @@ type AbsurdCIStatus struct {
 	CRName                   string                  `json:"crName"`
 	Namespace                string                  `json:"namespace"`
 	PVCName                  string                  `json:"pvcName"`
+	Dag                      []AStep                 `json:"dag"`
 }
 
 //+kubebuilder:object:root=true
