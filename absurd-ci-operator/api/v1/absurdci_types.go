@@ -27,6 +27,29 @@ type ACommand struct {
 	Args    []string `json:"args"`
 }
 
+type AEnv struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type AMappingConfig struct {
+	Key  string `json:"key"`
+	Path string `json:"path"`
+}
+
+type AMountOptions struct {
+	MountToEnv    bool             `json:"mountToEnv"`
+	MountToVolume bool             `json:"mountToVolume"`
+	MappingConfig []AMappingConfig `json:"mappingConfig"`
+}
+
+type AStepEnv struct {
+	SecretName    string        `json:"secretName"`
+	ConfigMapName string        `json:"configMapName"`
+	Envs          []AEnv        `json:"envs"`
+	MountOptions  AMountOptions `json:"mountOptions"`
+}
+
 type AStep struct {
 	Name     string     `json:"name"`
 	Executor string     `json:"executor"`
@@ -36,6 +59,8 @@ type AStep struct {
 	Order int `json:"order"`
 	// +kubebuilder:validation:Optional
 	SecretName string `json:"secretName"`
+	// +kubebuilder:validation:Optional
+	Environments AStepEnv `json:"stepEnvs"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
