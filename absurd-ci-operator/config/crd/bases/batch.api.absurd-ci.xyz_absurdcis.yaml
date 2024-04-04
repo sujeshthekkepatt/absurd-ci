@@ -72,6 +72,56 @@ spec:
                       type: string
                     secretName:
                       type: string
+                    stepEnvs:
+                      properties:
+                        configMapName:
+                          type: string
+                        envs:
+                          items:
+                            properties:
+                              key:
+                                type: string
+                              value:
+                                type: string
+                            required:
+                            - key
+                            - value
+                            type: object
+                          type: array
+                        mountOptions:
+                          properties:
+                            mappingConfig:
+                              items:
+                                properties:
+                                  key:
+                                    type: string
+                                  path:
+                                    type: string
+                                required:
+                                - key
+                                - path
+                                type: object
+                              type: array
+                            mountToEnv:
+                              type: boolean
+                            mountToVolume:
+                              type: boolean
+                            volumeName:
+                              type: string
+                          required:
+                          - mappingConfig
+                          - mountToEnv
+                          - mountToVolume
+                          - volumeName
+                          type: object
+                        secretName:
+                          type: string
+                      required:
+                      - configMapName
+                      - envs
+                      - mountOptions
+                      - secretName
+                      type: object
                   required:
                   - commands
                   - executor
@@ -115,6 +165,56 @@ spec:
                         type: string
                       secretName:
                         type: string
+                      stepEnvs:
+                        properties:
+                          configMapName:
+                            type: string
+                          envs:
+                            items:
+                              properties:
+                                key:
+                                  type: string
+                                value:
+                                  type: string
+                              required:
+                              - key
+                              - value
+                              type: object
+                            type: array
+                          mountOptions:
+                            properties:
+                              mappingConfig:
+                                items:
+                                  properties:
+                                    key:
+                                      type: string
+                                    path:
+                                      type: string
+                                  required:
+                                  - key
+                                  - path
+                                  type: object
+                                type: array
+                              mountToEnv:
+                                type: boolean
+                              mountToVolume:
+                                type: boolean
+                              volumeName:
+                                type: string
+                            required:
+                            - mappingConfig
+                            - mountToEnv
+                            - mountToVolume
+                            - volumeName
+                            type: object
+                          secretName:
+                            type: string
+                        required:
+                        - configMapName
+                        - envs
+                        - mountOptions
+                        - secretName
+                        type: object
                     required:
                     - commands
                     - executor
@@ -150,6 +250,56 @@ spec:
                           type: string
                         secretName:
                           type: string
+                        stepEnvs:
+                          properties:
+                            configMapName:
+                              type: string
+                            envs:
+                              items:
+                                properties:
+                                  key:
+                                    type: string
+                                  value:
+                                    type: string
+                                required:
+                                - key
+                                - value
+                                type: object
+                              type: array
+                            mountOptions:
+                              properties:
+                                mappingConfig:
+                                  items:
+                                    properties:
+                                      key:
+                                        type: string
+                                      path:
+                                        type: string
+                                    required:
+                                    - key
+                                    - path
+                                    type: object
+                                  type: array
+                                mountToEnv:
+                                  type: boolean
+                                mountToVolume:
+                                  type: boolean
+                                volumeName:
+                                  type: string
+                              required:
+                              - mappingConfig
+                              - mountToEnv
+                              - mountToVolume
+                              - volumeName
+                              type: object
+                            secretName:
+                              type: string
+                          required:
+                          - configMapName
+                          - envs
+                          - mountOptions
+                          - secretName
+                          type: object
                       required:
                       - commands
                       - executor
@@ -238,6 +388,56 @@ spec:
                       type: string
                     secretName:
                       type: string
+                    stepEnvs:
+                      properties:
+                        configMapName:
+                          type: string
+                        envs:
+                          items:
+                            properties:
+                              key:
+                                type: string
+                              value:
+                                type: string
+                            required:
+                            - key
+                            - value
+                            type: object
+                          type: array
+                        mountOptions:
+                          properties:
+                            mappingConfig:
+                              items:
+                                properties:
+                                  key:
+                                    type: string
+                                  path:
+                                    type: string
+                                required:
+                                - key
+                                - path
+                                type: object
+                              type: array
+                            mountToEnv:
+                              type: boolean
+                            mountToVolume:
+                              type: boolean
+                            volumeName:
+                              type: string
+                          required:
+                          - mappingConfig
+                          - mountToEnv
+                          - mountToVolume
+                          - volumeName
+                          type: object
+                        secretName:
+                          type: string
+                      required:
+                      - configMapName
+                      - envs
+                      - mountOptions
+                      - secretName
+                      type: object
                   required:
                   - commands
                   - executor

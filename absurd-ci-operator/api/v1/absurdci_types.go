@@ -38,9 +38,10 @@ type AMappingConfig struct {
 }
 
 type AMountOptions struct {
+	VolumeName    string           `json:"volumeName"`
 	MountToEnv    bool             `json:"mountToEnv"`
 	MountToVolume bool             `json:"mountToVolume"`
-	MappingConfig []AMappingConfig `json:"mappingConfig"`
+	MappingConfig []AMappingConfig `json:"mappingConfig"` /// if mapping config is empty it would mount as a whole
 }
 
 type AStepEnv struct {

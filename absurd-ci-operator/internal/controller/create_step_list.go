@@ -438,3 +438,78 @@ func InitPVC(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Request, cr *b
 
 	return nil
 }
+
+func processEnvVarsForThePod(currentStep batchv1.AStep) {
+
+	stepEnv := currentStep.Environments
+
+	var envVars []corev1.EnvVar
+	var envFrom []corev1.EnvFromSource
+	var volumesFromEnv []corev1.Volume
+
+	if len(stepEnv.Envs) > 0 {
+
+		for _, val := range stepEnv.Envs {
+
+			envVars = append(envVars, corev1.EnvVar{Name: val.Key, Value: val.Value})
+		}
+
+	}
+
+	if stepEnv.SecretName != "" {
+
+		if stepEnv.MountOptions.MountToEnv {
+
+			envFromSecret := corev1.EnvFromSource{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: stepEnv.SecretName,
+					},
+				},
+			}
+			envFrom = append(envFrom, envFromSecret)
+
+		}
+
+		if stepEnv.MountOptions.MountToVolume {
+
+			if len(stepEnv.MountOptions.MappingConfig) > 0 {
+
+				for _, val := range stepEnv.MountOptions.MappingConfig {
+					volumeFrom := corev1.Volume{
+						Name: stepEnv.MountOptions.VolumeName, // Name of the volume. This should be accept from AbsurdCI Spec
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: currentStep.SecretName, // Name of the Secret to mount
+								Items: []corev1.KeyToPath{
+									{
+										Key:  val.Key,
+										Path: val.Path,
+									},
+								},
+							},
+						},
+					}
+
+					volumesFromEnv = append(volumesFromEnv, volumeFrom)
+				}
+			} else {
+
+				//map the secret as a whole to a volume
+
+				volumeFrom := corev1.Volume{
+					Name: stepEnv.MountOptions.VolumeName, // Name of the volume. This should be accept from AbsurdCI Spec
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: currentStep.SecretName, // Name of the Secret to mount
+						},
+					},
+				}
+
+				volumesFromEnv = append(volumesFromEnv, volumeFrom)
+			}
+		}
+
+	}
+
+}
