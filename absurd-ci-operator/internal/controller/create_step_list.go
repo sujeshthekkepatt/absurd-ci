@@ -56,8 +56,12 @@ func createStepsList(crSpec *batchv1.AbsurdCI) (batchv1.APodExecutionContext, er
 			initStep = step
 		}
 
+		fmt.Println("steps are", step.Environments)
+
 		stepList = append(stepList, step)
 	}
+
+	fmt.Println("current step", initStep)
 
 	podContext.CurrentStep = initStep
 	podContext.Steps = stepList
@@ -242,35 +246,26 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	stepContainers := []corev1.Container{}
 
-	var envFrom corev1.EnvFromSource
-	var volumeFromEnv corev1.Volume
+	// var envFrom corev1.EnvFromSource
+	// var volumeFromEnv corev1.Volume
 
-	if currentStep.SecretName != "" {
-		envFrom = corev1.EnvFromSource{
-			SecretRef: &corev1.SecretEnvSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: currentStep.SecretName,
-				},
-			},
-		}
+	var envVars []corev1.EnvVar
 
-		volumeFromEnv = corev1.Volume{
-			Name: "my-secret-volume", // Name of the volume. This should be accept from AbsurdCI Spec
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: currentStep.SecretName, // Name of the Secret to mount
-					Items: []corev1.KeyToPath{
-						{
-							Key:  ".dockerconfigjson",
-							Path: "config.json",
-						},
-					},
-				},
-			},
-		}
-	} else {
-		fmt.Println("no secret. no env")
-	}
+	var envFromSource []corev1.EnvFromSource
+
+	var envFromVolume []corev1.Volume
+
+	var volumeMounts []corev1.VolumeMount
+	envVars, envFromSource, envFromVolume, volumeMounts = ProcessEnvVarsForThePod(currentStep)
+
+	fmt.Println("envvars", envVars)
+	fmt.Println("envFromSource", envFromSource)
+	fmt.Println("envFromVolume", envFromVolume)
+	// fmt.Println("volumeMounts", volumeMounts)
+
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: "/workspace/app",
+		Name: "working-dir",
+	})
 
 	//each step command ran as a container in the pod. Ideally each step should contain a single command
 	for _, sCommand := range stepCommands {
@@ -285,28 +280,9 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 				Args:            sCommand.Args,
 				ImagePullPolicy: corev1.PullAlways,
 				WorkingDir:      "/workspace/app",
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						MountPath: "/workspace/app",
-						Name:      "working-dir",
-					},
-
-					{
-						MountPath: "/kaniko/.docker",  // should read from absurd spec
-						Name:      "my-secret-volume", // this should be from AbsurdCI  spec
-					},
-				},
-				EnvFrom: []corev1.EnvFromSource{envFrom},
-				Env: []corev1.EnvVar{
-					{
-						Name:  "GIT_SSH_COMMAND",
-						Value: "ssh -o StrictHostKeyChecking=no",
-					},
-					// {
-					// 	Name:  "DOCKER_CONFIG",
-					// 	Value: "/workspace/app/secrets",
-					// },
-				},
+				VolumeMounts:    volumeMounts,
+				EnvFrom:         envFromSource,
+				Env:             envVars,
 			}
 		} else {
 
@@ -317,28 +293,12 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 				Args:            sCommand.Args,
 				ImagePullPolicy: corev1.PullAlways,
 				WorkingDir:      "/workspace/app",
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						MountPath: "/workspace/app",
-						Name:      "working-dir",
-					},
-					{
-						MountPath: "/kaniko/.docker",
-						Name:      "my-secret-volume", // this should be from AbsurdCI  spec
-					},
-				},
-				EnvFrom: []corev1.EnvFromSource{envFrom},
-				Env: []corev1.EnvVar{
-					{
-						Name:  "GIT_SSH_COMMAND",
-						Value: "ssh -o StrictHostKeyChecking=no",
-					},
-					// {
-					// 	Name:  "DOCKER_CONFIG",
-					// 	Value: "/workspace/app/secrets",
-					// },
-				},
+				VolumeMounts:    volumeMounts,
+				EnvFrom:         envFromSource,
+				Env:             envVars,
 			}
+
+			fmt.Println("container", container)
 		}
 
 		fmt.Println("container is", container)
@@ -362,6 +322,14 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	stepContainers = append(stepContainers, nodeExecutorContiner)
 
+	envFromVolume = append(envFromVolume, corev1.Volume{
+		Name: "working-dir",
+
+		VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+			ClaimName: ciConfig.Status.PVCName,
+		}},
+	})
+
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      ciConfig.Status.AStepPodCreationInfo[currentStep.Name].PodName,
@@ -369,17 +337,7 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 		},
 
 		Spec: corev1.PodSpec{
-			Volumes: []corev1.Volume{{
-				Name: "working-dir",
-
-				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: ciConfig.Status.PVCName,
-				}},
-			},
-				volumeFromEnv,
-			},
-			// InitContainers: initContainers,
-
+			Volumes:       envFromVolume,
 			Containers:    stepContainers,
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
@@ -439,7 +397,7 @@ func InitPVC(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Request, cr *b
 	return nil
 }
 
-func processEnvVarsForThePod(currentStep batchv1.AStep) {
+func ProcessEnvVarsForThePod(currentStep batchv1.AStep) ([]corev1.EnvVar, []corev1.EnvFromSource, []corev1.Volume, []corev1.VolumeMount) {
 
 	stepEnv := currentStep.Environments
 
@@ -447,14 +405,20 @@ func processEnvVarsForThePod(currentStep batchv1.AStep) {
 	var envFrom []corev1.EnvFromSource
 	var volumesFromEnv []corev1.Volume
 
+	var volumeMounts []corev1.VolumeMount
+
+	fmt.Println("envvars length", len(stepEnv.Envs))
 	if len(stepEnv.Envs) > 0 {
 
 		for _, val := range stepEnv.Envs {
+			fmt.Println("envvars ", val)
 
 			envVars = append(envVars, corev1.EnvVar{Name: val.Key, Value: val.Value})
 		}
 
 	}
+
+	fmt.Println("envvars", envVars)
 
 	if stepEnv.SecretName != "" {
 
@@ -477,7 +441,7 @@ func processEnvVarsForThePod(currentStep batchv1.AStep) {
 
 				for _, val := range stepEnv.MountOptions.MappingConfig {
 					volumeFrom := corev1.Volume{
-						Name: stepEnv.MountOptions.VolumeName, // Name of the volume. This should be accept from AbsurdCI Spec
+						Name: val.VolumeName, // Name of the volume. This should be accept from AbsurdCI Spec
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName: currentStep.SecretName, // Name of the Secret to mount
@@ -490,6 +454,13 @@ func processEnvVarsForThePod(currentStep batchv1.AStep) {
 							},
 						},
 					}
+
+					volumeMount := corev1.VolumeMount{
+						MountPath: val.MountPath,
+						Name:      val.VolumeName,
+					}
+
+					volumeMounts = append(volumeMounts, volumeMount)
 
 					volumesFromEnv = append(volumesFromEnv, volumeFrom)
 				}
@@ -511,5 +482,5 @@ func processEnvVarsForThePod(currentStep batchv1.AStep) {
 		}
 
 	}
-
+	return envVars, envFrom, volumesFromEnv, volumeMounts
 }

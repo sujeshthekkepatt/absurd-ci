@@ -95,11 +95,17 @@ spec:
                                 properties:
                                   key:
                                     type: string
+                                  mountPath:
+                                    type: string
                                   path:
+                                    type: string
+                                  volumeName:
                                     type: string
                                 required:
                                 - key
+                                - mountPath
                                 - path
+                                - volumeName
                                 type: object
                               type: array
                             mountToEnv:
@@ -188,11 +194,17 @@ spec:
                                   properties:
                                     key:
                                       type: string
+                                    mountPath:
+                                      type: string
                                     path:
+                                      type: string
+                                    volumeName:
                                       type: string
                                   required:
                                   - key
+                                  - mountPath
                                   - path
+                                  - volumeName
                                   type: object
                                 type: array
                               mountToEnv:
@@ -273,11 +285,17 @@ spec:
                                     properties:
                                       key:
                                         type: string
+                                      mountPath:
+                                        type: string
                                       path:
+                                        type: string
+                                      volumeName:
                                         type: string
                                     required:
                                     - key
+                                    - mountPath
                                     - path
+                                    - volumeName
                                     type: object
                                   type: array
                                 mountToEnv:
@@ -411,11 +429,17 @@ spec:
                                 properties:
                                   key:
                                     type: string
+                                  mountPath:
+                                    type: string
                                   path:
+                                    type: string
+                                  volumeName:
                                     type: string
                                 required:
                                 - key
+                                - mountPath
                                 - path
+                                - volumeName
                                 type: object
                               type: array
                             mountToEnv:

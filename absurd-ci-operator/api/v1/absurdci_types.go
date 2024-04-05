@@ -27,16 +27,21 @@ type ACommand struct {
 	Args    []string `json:"args"`
 }
 
+// +kubebuilder:validation:Optional
 type AEnv struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
+// +kubebuilder:validation:Optional
 type AMappingConfig struct {
-	Key  string `json:"key"`
-	Path string `json:"path"`
+	Key        string `json:"key"`
+	Path       string `json:"path"`
+	VolumeName string `json:"volumeName"`
+	MountPath  string `json:"mountPath"`
 }
 
+// +kubebuilder:validation:Optional
 type AMountOptions struct {
 	VolumeName    string           `json:"volumeName"`
 	MountToEnv    bool             `json:"mountToEnv"`
@@ -44,6 +49,7 @@ type AMountOptions struct {
 	MappingConfig []AMappingConfig `json:"mappingConfig"` /// if mapping config is empty it would mount as a whole
 }
 
+// +kubebuilder:validation:Optional
 type AStepEnv struct {
 	SecretName    string        `json:"secretName"`
 	ConfigMapName string        `json:"configMapName"`

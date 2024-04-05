@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: absurd-ci-operator
   name: absurdci-sujesh
-  namespace: test
+  namespace: test-1
 spec:
   name: ci-pipeline-test-1
   version: v1.0.0
