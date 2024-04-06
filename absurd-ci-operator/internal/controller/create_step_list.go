@@ -52,9 +52,37 @@ func createStepsList(crSpec *batchv1.AbsurdCI) (batchv1.APodExecutionContext, er
 			totalStepCommands += 1
 		}
 
+		if len(step.Environments.Envs) <= 0 && step.Environments.SecretName == "" {
+
+			fmt.Println("no env")
+
+			step.Environments = batchv1.AStepEnv{
+
+				SecretName:    "",
+				ConfigMapName: "",
+				Envs:          []batchv1.AEnv{},
+				MountOptions: batchv1.AMountOptions{
+					VolumeName:    "",
+					MountToEnv:    false,
+					MountToVolume: false,
+					MappingConfig: []batchv1.AMappingConfig{},
+				},
+			}
+
+		}
+
 		if step.Order == 0 {
 			initStep = step
 		}
+
+		// fmt.Println("envvars", envVars)
+		// fmt.Println("envFromSource", envFromSource)
+		// fmt.Println("envFromVolume", envFromVolume)
+		// fmt.Println("volumeMounts", volumeMounts)
+
+		// volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: "/workspace/app",
+		// Name: "working-dir",
+		// })
 
 		fmt.Println("steps are", step.Environments)
 
@@ -89,6 +117,21 @@ func getNextItem(currentStep batchv1.AStep, crSteps []batchv1.AStep) batchv1.ASt
 
 		return batchv1.AStep{}
 	}
+	return nextStep
+
+}
+
+func getFirstStep(crSteps []batchv1.AStep) batchv1.AStep {
+
+	var nextStep batchv1.AStep
+	for _, element := range crSteps {
+
+		if element.Order == 0 {
+			nextStep = element
+			break
+		}
+	}
+
 	return nextStep
 
 }

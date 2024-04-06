@@ -49,18 +49,18 @@ spec:
             - "workspace/app"
       runAfter: ""
       secretName: docker-config-secret
-      stepEnvs:
-        secretName: docker-config-secret
-        configMapName: random-cm
-        envs:
-          - key: TEST_KEY
-            value: TEST_VAL
-        mountOptions:
-          mappingConfig:
-            - key: ".dockerconfigjson"
-              path: "config.json"
-              volumeName: "my-secret-volume"
-              mountPath: "/kaniko/.docker"
-          mountToEnv: true
-          mountToVolume: true
-          volumeName: "my-volume"
+      # stepEnvs:
+      #   secretName: docker-config-secret
+      #   configMapName: random-cm
+      #   envs:
+      #     - key: TEST_KEY
+      #       value: TEST_VAL
+      #   mountOptions:
+      #     mappingConfig:
+      #       - key: ".dockerconfigjson"
+      #         path: "config.json"
+      #         volumeName: "my-secret-volume"
+      #         mountPath: "/kaniko/.docker"
+      #     mountToEnv: true
+      #     mountToVolume: true
+      #     volumeName: "my-volume"
