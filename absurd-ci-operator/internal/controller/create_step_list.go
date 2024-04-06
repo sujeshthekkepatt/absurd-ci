@@ -166,7 +166,7 @@ func getPodStatus(r *AbsurdCIReconciler, ctx context.Context, cr *batchv1.Absurd
 }
 
 // currentStep is actually nextStep
-func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, currentStep batchv1.AStep, cr *batchv1.AbsurdCI) bool {
+func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, currentStep batchv1.AStep, cr *batchv1.AbsurdCI) (bool, bool) {
 
 	podInfo, exists := cr.Status.AStepPodCreationInfo[currentStep.Name]
 
@@ -182,11 +182,11 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 		if err != nil {
 			if kubeerrors.IsNotFound(err) {
 
-				return true
+				return true, true
 			}
 
 			fmt.Println("error getting pod status")
-			return false
+			return false, false
 		}
 
 		fmt.Println("pod status ", status.Phase, podInfo.PodName)
@@ -194,12 +194,16 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 		if (status.Phase == "Running") || (status.Phase == "Pending") {
 
 			fmt.Printf("The Step:%s/pod is still running. No need to run the next step. Wait for the update", currentStep.Name)
-			return false
+			return false, false
 		} else if status.Phase == "Succeeded" {
 
 			fmt.Println("Create and schedule new Step/Pod")
 			step := getNextItem(currentStep, cr.Status.Dag)
 			fmt.Println("nextstep", step)
+
+			cr.Status.APodExecutionContextInfo.TotalNumberOfStepsCompleted = cr.Status.APodExecutionContextInfo.TotalNumberOfStepsCompleted + 1
+			cr.Status.APodExecutionContextInfo.TotalNumberOfTasksCompleted = cr.Status.APodExecutionContextInfo.TotalNumberOfTasksCompleted + len(currentStep.Commands)
+
 			if step.Name != "" {
 				cr.Status.AStepPodCreationInfo[step.Name] = batchv1.AStepPodInfo{
 					PodName:        fmt.Sprintf("task-pod-%s", step.Name),
@@ -207,12 +211,13 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 					PodStatus:      "Pending",
 				}
 				cr.Status.APodExecutionContextInfo.CurrentStep = step
-				return true
+
+				return true, true
 			}
-			return false
+			return false, true
 		} else {
 			fmt.Println("status is down", status.Phase)
-			return false
+			return false, false
 		}
 	} else {
 
@@ -227,7 +232,7 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 			ConatinerNames: []batchv1.AContainerNames{},
 			PodStatus:      "Pending",
 		}
-		return true
+		return true, true
 	}
 
 }

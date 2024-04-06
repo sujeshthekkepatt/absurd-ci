@@ -20,7 +20,7 @@ spec:
           args:
             - "--dockerfile=workspace/app/absurd-ci-operator/Dockerfile"
             - "--context=workspace/app/absurd-ci-operator"
-            - "--destination=sujeshthekkepatt/absurd-ci-controller:kaniko"
+            - "--destination=sujeshthekkepatt/absurd-ci-controller:kaniko-v2"
       secretName: docker-config-secret
       stepEnvs:
         secretName: docker-config-secret
