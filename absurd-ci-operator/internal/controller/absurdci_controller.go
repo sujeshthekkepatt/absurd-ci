@@ -62,7 +62,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 
 		fmt.Println("Error occured", err)
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, err
 	}
 
 	fmt.Println(absurdCIconfig.ObjectMeta.DeletionTimestamp)
@@ -83,7 +83,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err != nil {
 
 			fmt.Println("Error", err)
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, err
 
 		}
 
@@ -92,7 +92,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err != nil {
 
 			fmt.Println("error while updating status", err)
-			return ctrl.Result{}, nil
+			return ctrl.Result{}, err
 
 		}
 
@@ -109,28 +109,37 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		fmt.Println("Going to init pod creation")
 
-		for {
+		// for {
 
-			needUpdate := CreateStepPodCreationInfo(r, ctx, absurdCIconfig.Status.APodExecutionContextInfo.CurrentStep, absurdCIconfig)
+		needUpdate, needCrUpdate := CreateStepPodCreationInfo(r, ctx, absurdCIconfig.Status.APodExecutionContextInfo.CurrentStep, absurdCIconfig)
 
-			fmt.Println("need update is", needUpdate)
-			// currently everything will be running on a single pod as init container
-			if needUpdate {
+		fmt.Println("need update is", needUpdate)
+		// currently everything will be running on a single pod as init container
+		if needUpdate {
 
-				CreateWorkerPod(r, ctx, req, absurdCIconfig)
+			CreateWorkerPod(r, ctx, req, absurdCIconfig)
+			err := r.Status().Update(ctx, absurdCIconfig)
+
+			if err != nil {
+
+				fmt.Println(err)
+			}
+			fmt.Println("Test Pod Created")
+		} else {
+			if needCrUpdate {
 				err := r.Status().Update(ctx, absurdCIconfig)
 
 				if err != nil {
 
 					fmt.Println(err)
 				}
-				fmt.Println("Test Pod Created")
 			}
 		}
+		// }
 
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{Requeue: true}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
