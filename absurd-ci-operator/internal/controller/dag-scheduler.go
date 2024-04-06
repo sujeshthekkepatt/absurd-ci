@@ -64,7 +64,24 @@ func setOrderInfoOnAstep(order int, stepName string, ciConfig *batchv1.AbsurdCI)
 	for _, val := range ciConfig.Spec.Steps {
 
 		if val.Name == stepName {
+			if len(val.Environments.Envs) <= 0 && val.Environments.SecretName == "" {
 
+				fmt.Println("no env")
+
+				val.Environments = batchv1.AStepEnv{
+
+					SecretName:    "",
+					ConfigMapName: "",
+					Envs:          []batchv1.AEnv{},
+					MountOptions: batchv1.AMountOptions{
+						VolumeName:    "",
+						MountToEnv:    false,
+						MountToVolume: false,
+						MappingConfig: []batchv1.AMappingConfig{},
+					},
+				}
+
+			}
 			val.Order = order
 			stepVal = val
 

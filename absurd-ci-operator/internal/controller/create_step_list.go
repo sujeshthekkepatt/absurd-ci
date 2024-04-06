@@ -52,12 +52,44 @@ func createStepsList(crSpec *batchv1.AbsurdCI) (batchv1.APodExecutionContext, er
 			totalStepCommands += 1
 		}
 
+		if len(step.Environments.Envs) <= 0 && step.Environments.SecretName == "" {
+
+			fmt.Println("no env")
+
+			step.Environments = batchv1.AStepEnv{
+
+				SecretName:    "",
+				ConfigMapName: "",
+				Envs:          []batchv1.AEnv{},
+				MountOptions: batchv1.AMountOptions{
+					VolumeName:    "",
+					MountToEnv:    false,
+					MountToVolume: false,
+					MappingConfig: []batchv1.AMappingConfig{},
+				},
+			}
+
+		}
+
 		if step.Order == 0 {
 			initStep = step
 		}
 
+		// fmt.Println("envvars", envVars)
+		// fmt.Println("envFromSource", envFromSource)
+		// fmt.Println("envFromVolume", envFromVolume)
+		// fmt.Println("volumeMounts", volumeMounts)
+
+		// volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: "/workspace/app",
+		// Name: "working-dir",
+		// })
+
+		fmt.Println("steps are", step.Environments)
+
 		stepList = append(stepList, step)
 	}
+
+	fmt.Println("current step", initStep)
 
 	podContext.CurrentStep = initStep
 	podContext.Steps = stepList
@@ -85,6 +117,21 @@ func getNextItem(currentStep batchv1.AStep, crSteps []batchv1.AStep) batchv1.ASt
 
 		return batchv1.AStep{}
 	}
+	return nextStep
+
+}
+
+func getFirstStep(crSteps []batchv1.AStep) batchv1.AStep {
+
+	var nextStep batchv1.AStep
+	for _, element := range crSteps {
+
+		if element.Order == 0 {
+			nextStep = element
+			break
+		}
+	}
+
 	return nextStep
 
 }
@@ -242,10 +289,32 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	stepContainers := []corev1.Container{}
 
+	// var envFrom corev1.EnvFromSource
+	// var volumeFromEnv corev1.Volume
+
+	var envVars []corev1.EnvVar
+
+	var envFromSource []corev1.EnvFromSource
+
+	var envFromVolume []corev1.Volume
+
+	var volumeMounts []corev1.VolumeMount
+	envVars, envFromSource, envFromVolume, volumeMounts = ProcessEnvVarsForThePod(currentStep)
+
+	fmt.Println("envvars", envVars)
+	fmt.Println("envFromSource", envFromSource)
+	fmt.Println("envFromVolume", envFromVolume)
+	// fmt.Println("volumeMounts", volumeMounts)
+
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: "/workspace/app",
+		Name: "working-dir",
+	})
+
 	//each step command ran as a container in the pod. Ideally each step should contain a single command
 	for _, sCommand := range stepCommands {
 		fmt.Println("scommand", sCommand.Command)
 		var container corev1.Container
+
 		if sCommand.Command == "" {
 
 			container = corev1.Container{
@@ -254,18 +323,9 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 				Args:            sCommand.Args,
 				ImagePullPolicy: corev1.PullAlways,
 				WorkingDir:      "/workspace/app",
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						MountPath: "/workspace/app",
-						Name:      "working-dir",
-					},
-				},
-				Env: []corev1.EnvVar{
-					{
-						Name:  "GIT_SSH_COMMAND",
-						Value: "ssh -o StrictHostKeyChecking=no",
-					},
-				},
+				VolumeMounts:    volumeMounts,
+				EnvFrom:         envFromSource,
+				Env:             envVars,
 			}
 		} else {
 
@@ -276,19 +336,12 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 				Args:            sCommand.Args,
 				ImagePullPolicy: corev1.PullAlways,
 				WorkingDir:      "/workspace/app",
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						MountPath: "/workspace/app",
-						Name:      "working-dir",
-					},
-				},
-				Env: []corev1.EnvVar{
-					{
-						Name:  "GIT_SSH_COMMAND",
-						Value: "ssh -o StrictHostKeyChecking=no",
-					},
-				},
+				VolumeMounts:    volumeMounts,
+				EnvFrom:         envFromSource,
+				Env:             envVars,
 			}
+
+			fmt.Println("container", container)
 		}
 
 		fmt.Println("container is", container)
@@ -312,6 +365,14 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	stepContainers = append(stepContainers, nodeExecutorContiner)
 
+	envFromVolume = append(envFromVolume, corev1.Volume{
+		Name: "working-dir",
+
+		VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+			ClaimName: ciConfig.Status.PVCName,
+		}},
+	})
+
 	pod := &corev1.Pod{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      ciConfig.Status.AStepPodCreationInfo[currentStep.Name].PodName,
@@ -319,15 +380,7 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 		},
 
 		Spec: corev1.PodSpec{
-			Volumes: []corev1.Volume{{
-				Name: "working-dir",
-
-				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: ciConfig.Status.PVCName,
-				}},
-			}},
-			// InitContainers: initContainers,
-
+			Volumes:       envFromVolume,
 			Containers:    stepContainers,
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
@@ -385,4 +438,92 @@ func InitPVC(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Request, cr *b
 	cr.Status.PVCName = pvcName
 
 	return nil
+}
+
+func ProcessEnvVarsForThePod(currentStep batchv1.AStep) ([]corev1.EnvVar, []corev1.EnvFromSource, []corev1.Volume, []corev1.VolumeMount) {
+
+	stepEnv := currentStep.Environments
+
+	var envVars []corev1.EnvVar
+	var envFrom []corev1.EnvFromSource
+	var volumesFromEnv []corev1.Volume
+
+	var volumeMounts []corev1.VolumeMount
+
+	fmt.Println("envvars length", len(stepEnv.Envs))
+	if len(stepEnv.Envs) > 0 {
+
+		for _, val := range stepEnv.Envs {
+			fmt.Println("envvars ", val)
+
+			envVars = append(envVars, corev1.EnvVar{Name: val.Key, Value: val.Value})
+		}
+
+	}
+
+	fmt.Println("envvars", envVars)
+
+	if stepEnv.SecretName != "" {
+
+		if stepEnv.MountOptions.MountToEnv {
+
+			envFromSecret := corev1.EnvFromSource{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: stepEnv.SecretName,
+					},
+				},
+			}
+			envFrom = append(envFrom, envFromSecret)
+
+		}
+
+		if stepEnv.MountOptions.MountToVolume {
+
+			if len(stepEnv.MountOptions.MappingConfig) > 0 {
+
+				for _, val := range stepEnv.MountOptions.MappingConfig {
+					volumeFrom := corev1.Volume{
+						Name: val.VolumeName, // Name of the volume. This should be accept from AbsurdCI Spec
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: currentStep.SecretName, // Name of the Secret to mount
+								Items: []corev1.KeyToPath{
+									{
+										Key:  val.Key,
+										Path: val.Path,
+									},
+								},
+							},
+						},
+					}
+
+					volumeMount := corev1.VolumeMount{
+						MountPath: val.MountPath,
+						Name:      val.VolumeName,
+					}
+
+					volumeMounts = append(volumeMounts, volumeMount)
+
+					volumesFromEnv = append(volumesFromEnv, volumeFrom)
+				}
+			} else {
+
+				//map the secret as a whole to a volume
+
+				volumeFrom := corev1.Volume{
+					Name: stepEnv.MountOptions.VolumeName, // Name of the volume. This should be accept from AbsurdCI Spec
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: currentStep.SecretName, // Name of the Secret to mount
+						},
+					},
+				}
+
+				volumesFromEnv = append(volumesFromEnv, volumeFrom)
+			}
+		}
+
+	}
+	return envVars, envFrom, volumesFromEnv, volumeMounts
 }

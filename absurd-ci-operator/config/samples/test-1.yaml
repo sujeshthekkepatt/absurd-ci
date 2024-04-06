@@ -1,0 +1,66 @@
+apiVersion: batch.api.absurd-ci.xyz/v1
+kind: AbsurdCI
+metadata:
+  labels:
+    app.kubernetes.io/name: absurdci
+    app.kubernetes.io/instance: absurdci-sample
+    app.kubernetes.io/part-of: absurd-ci-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: absurd-ci-operator
+  name: absurdci-sujesh
+  namespace: test-1
+spec:
+  name: ci-pipeline-test-1
+  version: v1.0.0
+  steps:
+    - name: kaniko
+      executor: gcr.io/kaniko-project/executor:latest
+      commands:
+        - name: "kaniko"
+          args:
+            - "--dockerfile=workspace/app/absurd-ci-operator/Dockerfile"
+            - "--context=workspace/app/absurd-ci-operator"
+            - "--destination=sujeshthekkepatt/absurd-ci-controller:kaniko"
+      secretName: docker-config-secret
+      stepEnvs:
+        secretName: docker-config-secret
+        configMapName: random-cm
+        envs:
+          - key: TEST_KEY
+            value: TEST_VAL
+        mountOptions:
+          mappingConfig:
+            - key: ".dockerconfigjson"
+              path: "config.json"
+              volumeName: "my-secret-volume"
+              mountPath: "/kaniko/.docker"
+          mountToEnv: true
+          mountToVolume: true
+          volumeName: "my-volume"
+      runAfter: initdir
+    - name: initdir
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "init"
+          command: "git"
+          args:
+            - "clone"
+            - "https://github.com/sujeshthekkepatt/absurd-ci.git"
+            - "workspace/app"
+      runAfter: ""
+      secretName: docker-config-secret
+      # stepEnvs:
+      #   secretName: docker-config-secret
+      #   configMapName: random-cm
+      #   envs:
+      #     - key: TEST_KEY
+      #       value: TEST_VAL
+      #   mountOptions:
+      #     mappingConfig:
+      #       - key: ".dockerconfigjson"
+      #         path: "config.json"
+      #         volumeName: "my-secret-volume"
+      #         mountPath: "/kaniko/.docker"
+      #     mountToEnv: true
+      #     mountToVolume: true
+      #     volumeName: "my-volume"

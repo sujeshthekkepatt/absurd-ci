@@ -27,6 +27,36 @@ type ACommand struct {
 	Args    []string `json:"args"`
 }
 
+// +kubebuilder:validation:Optional
+type AEnv struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// +kubebuilder:validation:Optional
+type AMappingConfig struct {
+	Key        string `json:"key"`
+	Path       string `json:"path"`
+	VolumeName string `json:"volumeName"`
+	MountPath  string `json:"mountPath"`
+}
+
+// +kubebuilder:validation:Optional
+type AMountOptions struct {
+	VolumeName    string           `json:"volumeName"`
+	MountToEnv    bool             `json:"mountToEnv"`
+	MountToVolume bool             `json:"mountToVolume"`
+	MappingConfig []AMappingConfig `json:"mappingConfig"` /// if mapping config is empty it would mount as a whole
+}
+
+// +kubebuilder:validation:Optional
+type AStepEnv struct {
+	SecretName    string        `json:"secretName"`
+	ConfigMapName string        `json:"configMapName"`
+	Envs          []AEnv        `json:"envs"`
+	MountOptions  AMountOptions `json:"mountOptions"`
+}
+
 type AStep struct {
 	Name     string     `json:"name"`
 	Executor string     `json:"executor"`
@@ -34,6 +64,10 @@ type AStep struct {
 	RunAfter string     `json:"runAfter"`
 	// +kubebuilder:validation:Optional
 	Order int `json:"order"`
+	// +kubebuilder:validation:Optional
+	SecretName string `json:"secretName"`
+	// +kubebuilder:validation:Optional
+	Environments AStepEnv `json:"stepEnvs"`
 }
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
