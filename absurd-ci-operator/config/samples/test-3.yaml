@@ -1,0 +1,77 @@
+apiVersion: batch.api.absurd-ci.xyz/v1
+kind: AbsurdCI
+metadata:
+  labels:
+    app.kubernetes.io/name: absurdci
+    app.kubernetes.io/instance: absurdci-sample
+    app.kubernetes.io/part-of: absurd-ci-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: absurd-ci-operator
+  name: absurdci-sujesh
+  namespace: test-3
+spec:
+  name: ci-pipeline-test-1
+  version: v1.0.0
+  steps:
+    - name: kaniko
+      executor: gcr.io/kaniko-project/executor:latest
+      commands:
+        - name: "kaniko"
+          args:
+            - "--dockerfile=workspace/app/apps/app-1/Dockerfile"
+            - "--context=workspace/app/apps/"
+            - "--destination=sujeshthekkepatt/app-1"
+      secretName: docker-config-secret
+      stepEnvs:
+        secretName: docker-config-secret
+        configMapName: random-cm
+        envs:
+          - key: TEST_KEY
+            value: TEST_VAL
+        mountOptions:
+          mappingConfig:
+            - key: ".dockerconfigjson"
+              path: "config.json"
+              volumeName: "my-secret-volume"
+              mountPath: "/kaniko/.docker"
+          mountToEnv: true
+          mountToVolume: true
+          volumeName: "my-volume"
+      runAfter: initdi2
+    - name: initdir
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "init"
+          command: "git"
+          args:
+            - "clone"
+            - "https://github.com/sujeshthekkepatt/test-docker.git"
+            - "workspace/app"
+      runAfter: ""
+      secretName: docker-config-secret
+    - name: initdi2
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "list"
+          command: "ls"
+          args:
+            # - "clone"
+            # - "https://github.com/sujeshthekkepatt/test-docker.git"
+            - "./workspace/app/apps"
+      runAfter: initdir
+      secretName: docker-config-secret
+      # stepEnvs:
+      #   secretName: docker-config-secret
+      #   configMapName: random-cm
+      #   envs:
+      #     - key: TEST_KEY
+      #       value: TEST_VAL
+      #   mountOptions:
+      #     mappingConfig:
+      #       - key: ".dockerconfigjson"
+      #         path: "config.json"
+      #         volumeName: "my-secret-volume"
+      #         mountPath: "/kaniko/.docker"
+      #     mountToEnv: true
+      #     mountToVolume: true
+      #     volumeName: "my-volume"

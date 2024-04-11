@@ -32,6 +32,8 @@ func InitSpecAndStatus(cr *batchv1.AbsurdCI) (*batchv1.AbsurdCI, error) {
 	cr.Status.APodExecutionContextInfo, _ = createStepsList(cr)
 	cr.Status.AStepPodCreationInfo = make(map[string]batchv1.AStepPodInfo)
 
+	fmt.Println("astep pod creation info", cr.Status.APodExecutionContextInfo)
+
 	return cr, nil
 }
 
@@ -46,7 +48,7 @@ func createStepsList(crSpec *batchv1.AbsurdCI) (batchv1.APodExecutionContext, er
 	totalSteps := 0
 	totalStepCommands := 0
 	var initStep batchv1.AStep
-	for _, step := range crSpec.Spec.Steps {
+	for _, step := range crSpec.Status.Dag {
 		totalSteps += 1
 		for range step.Commands {
 			totalStepCommands += 1
@@ -178,6 +180,8 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 
 		fmt.Println("getting pod status of", podInfo.PodName)
 		status, err := getPodStatus(r, ctx, cr, podInfo.PodName)
+
+		fmt.Println("status of the pod", status, podInfo.PodName)
 
 		if err != nil {
 			if kubeerrors.IsNotFound(err) {
