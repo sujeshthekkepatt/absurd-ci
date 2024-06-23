@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"fmt"
-
 	dag "github.com/dominikbraun/graph"
 	batchv1 "github.com/sujeshthekkepatt/absurd-ci/api/v1"
 )
@@ -16,7 +14,7 @@ func OrderSteps(ciConfig *batchv1.AbsurdCI) error {
 	absurdDag := dag.New(StepHash, dag.Directed(), dag.Acyclic(), dag.PreventCycles())
 
 	for _, val := range ciConfig.Spec.Steps {
-		fmt.Println("from add vertex", val.Name)
+		//fmt.Println("from add vertex", val.Name)
 		absurdDag.AddVertex(val.Name)
 	}
 
@@ -30,16 +28,16 @@ func OrderSteps(ciConfig *batchv1.AbsurdCI) error {
 	tdag, err := dag.TransitiveReduction(absurdDag)
 	if err != nil {
 
-		fmt.Println("Error while running transitive reduction sort")
+		//fmt.Println("Error while running transitive reduction sort")
 		return err
 	}
 	orderedSteps, err := dag.TopologicalSort(tdag)
 	if err != nil {
 
-		fmt.Println("Error while running topo sort")
+		//fmt.Println("Error while running topo sort")
 		return err
 	}
-	fmt.Println("dag edges: topo order", orderedSteps)
+	//fmt.Println("dag edges: topo order", orderedSteps)
 
 	orderedAsteps := []batchv1.AStep{}
 
@@ -66,7 +64,7 @@ func setOrderInfoOnAstep(order int, stepName string, ciConfig *batchv1.AbsurdCI)
 		if val.Name == stepName {
 			if len(val.Environments.Envs) <= 0 && val.Environments.SecretName == "" {
 
-				fmt.Println("no env")
+				//fmt.Println("no env")
 
 				val.Environments = batchv1.AStepEnv{
 

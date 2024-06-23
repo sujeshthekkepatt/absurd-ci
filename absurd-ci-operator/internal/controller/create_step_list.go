@@ -21,10 +21,10 @@ func InitSpecAndStatus(cr *batchv1.AbsurdCI) (*batchv1.AbsurdCI, error) {
 
 	err := OrderSteps(cr)
 
-	fmt.Println("DAG", cr.Status.Dag)
+	//fmt.Println("DAG", cr.Status.Dag)
 
 	if err != nil {
-		fmt.Println("error occured while performing ordering")
+		//fmt.Println("error occured while performing ordering")
 
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func InitSpecAndStatus(cr *batchv1.AbsurdCI) (*batchv1.AbsurdCI, error) {
 	cr.Status.APodExecutionContextInfo, _ = createStepsList(cr)
 	cr.Status.AStepPodCreationInfo = make(map[string]batchv1.AStepPodInfo)
 
-	fmt.Println("astep pod creation info", cr.Status.APodExecutionContextInfo)
+	//fmt.Println("astep pod creation info", cr.Status.APodExecutionContextInfo)
 
 	return cr, nil
 }
@@ -56,7 +56,7 @@ func createStepsList(crSpec *batchv1.AbsurdCI) (batchv1.APodExecutionContext, er
 
 		if len(step.Environments.Envs) <= 0 && step.Environments.SecretName == "" {
 
-			fmt.Println("no env")
+			//fmt.Println("no env")
 
 			step.Environments = batchv1.AStepEnv{
 
@@ -86,12 +86,12 @@ func createStepsList(crSpec *batchv1.AbsurdCI) (batchv1.APodExecutionContext, er
 		// Name: "working-dir",
 		// })
 
-		fmt.Println("steps are", step.Environments)
+		//fmt.Println("steps are", step.Environments)
 
 		stepList = append(stepList, step)
 	}
 
-	fmt.Println("current step", initStep)
+	//fmt.Println("current step", initStep)
 
 	podContext.CurrentStep = initStep
 	podContext.Steps = stepList
@@ -172,16 +172,16 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 
 	podInfo, exists := cr.Status.AStepPodCreationInfo[currentStep.Name]
 
-	fmt.Println("getting pod info", podInfo, exists)
+	//fmt.Println("getting pod info", podInfo, exists)
 
 	if exists {
 
 		// fmt.Println("from pod creation info", podInfo, exists, cr.Status.AStepPodCreationInfo, currentStep)
 
-		fmt.Println("getting pod status of", podInfo.PodName)
+		//fmt.Println("getting pod status of", podInfo.PodName)
 		status, err := getPodStatus(r, ctx, cr, podInfo.PodName)
 
-		fmt.Println("status of the pod", status, podInfo.PodName)
+		//fmt.Println("status of the pod", status, podInfo.PodName)
 
 		if err != nil {
 			if kubeerrors.IsNotFound(err) {
@@ -189,11 +189,11 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 				return true, true
 			}
 
-			fmt.Println("error getting pod status")
+			//fmt.Println("error getting pod status")
 			return false, false
 		}
 
-		fmt.Println("pod status ", status.Phase, podInfo.PodName)
+		//fmt.Println("pod status ", status.Phase, podInfo.PodName)
 
 		if (status.Phase == "Running") || (status.Phase == "Pending") {
 
@@ -201,9 +201,9 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 			return false, false
 		} else if status.Phase == "Succeeded" {
 
-			fmt.Println("Create and schedule new Step/Pod")
+			//fmt.Println("Create and schedule new Step/Pod")
 			step := getNextItem(currentStep, cr.Status.Dag)
-			fmt.Println("nextstep", step)
+			//fmt.Println("nextstep", step)
 
 			cr.Status.APodExecutionContextInfo.TotalNumberOfStepsCompleted = cr.Status.APodExecutionContextInfo.TotalNumberOfStepsCompleted + 1
 			cr.Status.APodExecutionContextInfo.TotalNumberOfTasksCompleted = cr.Status.APodExecutionContextInfo.TotalNumberOfTasksCompleted + len(currentStep.Commands)
@@ -220,17 +220,17 @@ func CreateStepPodCreationInfo(r *AbsurdCIReconciler, ctx context.Context, curre
 			}
 			return false, true
 		} else {
-			fmt.Println("status is down", status.Phase)
+			//fmt.Println("status is down", status.Phase)
 			return false, false
 		}
 	} else {
 
-		fmt.Println("Voila we need to start the  step")
+		//fmt.Println("Voila we need to start the  step")
 
 		step := getCurrentItem(currentStep.Name, cr.Status.APodExecutionContextInfo.Steps)
 		cr.Status.APodExecutionContextInfo.CurrentStep = step
 
-		fmt.Println("current step  and order is", step.Name, step.Order)
+		//fmt.Println("current step  and order is", step.Name, step.Order)
 		cr.Status.AStepPodCreationInfo[step.Name] = batchv1.AStepPodInfo{
 			PodName:        fmt.Sprintf("task-pod-%s", step.Name),
 			ConatinerNames: []batchv1.AContainerNames{},
@@ -256,7 +256,7 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	 */
 
-	fmt.Println("from create worker pod")
+	//fmt.Println("from create worker pod")
 
 	var stepCommands []batchv1.ACommand
 
@@ -310,9 +310,9 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 	var volumeMounts []corev1.VolumeMount
 	envVars, envFromSource, envFromVolume, volumeMounts = ProcessEnvVarsForThePod(currentStep)
 
-	fmt.Println("envvars", envVars)
-	fmt.Println("envFromSource", envFromSource)
-	fmt.Println("envFromVolume", envFromVolume)
+	//fmt.Println("envvars", envVars)
+	//fmt.Println("envFromSource", envFromSource)
+	//fmt.Println("envFromVolume", envFromVolume)
 	// fmt.Println("volumeMounts", volumeMounts)
 
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{MountPath: "/workspace/app",
@@ -321,7 +321,7 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	//each step command ran as a container in the pod. Ideally each step should contain a single command
 	for _, sCommand := range stepCommands {
-		fmt.Println("scommand", sCommand.Command)
+		//fmt.Println("scommand", sCommand.Command)
 		var container corev1.Container
 
 		if sCommand.Command == "" {
@@ -350,10 +350,10 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 				Env:             envVars,
 			}
 
-			fmt.Println("container", container)
+			//fmt.Println("container", container)
 		}
 
-		fmt.Println("container is", container)
+		//fmt.Println("container is", container)
 		stepContainers = append(stepContainers, container)
 	}
 
@@ -398,7 +398,7 @@ func CreateWorkerPod(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Reques
 
 	if err != nil {
 
-		fmt.Println(err)
+		//fmt.Println(err)
 		return err
 	}
 	return nil
@@ -435,7 +435,7 @@ func InitPVC(r *AbsurdCIReconciler, ctx context.Context, req ctrl.Request, cr *b
 			}
 		} else {
 
-			fmt.Println("Error while getting PVC", err)
+			//fmt.Println("Error while getting PVC", err)
 			return err
 
 		}
@@ -459,18 +459,18 @@ func ProcessEnvVarsForThePod(currentStep batchv1.AStep) ([]corev1.EnvVar, []core
 
 	var volumeMounts []corev1.VolumeMount
 
-	fmt.Println("envvars length", len(stepEnv.Envs))
+	//fmt.Println("envvars length", len(stepEnv.Envs))
 	if len(stepEnv.Envs) > 0 {
 
 		for _, val := range stepEnv.Envs {
-			fmt.Println("envvars ", val)
+			//fmt.Println("envvars ", val)
 
 			envVars = append(envVars, corev1.EnvVar{Name: val.Key, Value: val.Value})
 		}
 
 	}
 
-	fmt.Println("envvars", envVars)
+	//fmt.Println("envvars", envVars)
 
 	if stepEnv.SecretName != "" {
 

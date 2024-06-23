@@ -1,0 +1,52 @@
+apiVersion: batch.api.absurd-ci.xyz/v1
+kind: AbsurdCI
+metadata:
+  labels:
+    app.kubernetes.io/name: absurdci
+    app.kubernetes.io/instance: absurdci-sample
+    app.kubernetes.io/part-of: absurd-ci-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: absurd-ci-operator
+  name: absurdci-sujesh
+  namespace: test-4
+spec:
+  name: my-random-pipeline
+  version: v1.0.0
+  steps:
+    - name: initdir
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "init"
+          command: "git"
+          args:
+            - "clone"
+            - "https://github.com/sujeshthekkepatt/test-docker.git"
+            - "workspace/app"
+      runAfter: ""
+    - name: initdi2
+      executor: busybox
+      commands:
+        - name: "list"
+          command: "ls"
+          args:
+            # - "clone"
+            # - "https://github.com/sujeshthekkepatt/test-docker.git"
+            - "./workspace/app/apps"
+        - name: list-app
+          command: "ls"
+          args:
+            - "./workspace/app/apps/app-1"
+        - name: create-file
+          command: "sh"
+          args:
+            - "-c"
+            - "echo hello > ./workspace/app/apps/app-1/hello.txt"
+      runAfter: initdir
+    - name: list-step
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: list-app
+          command: "ls"
+          args:
+            - "./workspace/app/apps/app-1"
+      runAfter: initdi2
