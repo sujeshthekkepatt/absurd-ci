@@ -19,13 +19,13 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	batchv1 "github.com/sujeshthekkepatt/absurd-ci/api/v1"
 )
@@ -50,22 +50,23 @@ type AbsurdCIReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.4/pkg/reconcile
 func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l := log.FromContext(ctx)
+	// l := log.FromContext(ctx)
 
-	l.Info("From controller", "req", req)
+	// l.Info("From controller")
 
 	absurdCIconfig := &batchv1.AbsurdCI{}
 
+	fmt.Println("TS:", time.Now(), req.Name, req.Namespace)
 	err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, absurdCIconfig)
 
 	// todo handle errors properly using kubernetes errors package
 	if err != nil {
 
 		fmt.Println("Error occured", err)
-		return ctrl.Result{}, err
+		return ctrl.Result{}, nil
 	}
 
-	fmt.Println(absurdCIconfig.ObjectMeta.DeletionTimestamp)
+	//fmt.Println(absurdCIconfig.ObjectMeta.DeletionTimestamp)
 
 	if absurdCIconfig.ObjectMeta.DeletionTimestamp != nil {
 
@@ -113,7 +114,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		needUpdate, needCrUpdate := CreateStepPodCreationInfo(r, ctx, absurdCIconfig.Status.APodExecutionContextInfo.CurrentStep, absurdCIconfig)
 
-		fmt.Println("need update is", needUpdate)
+		//fmt.Println("need update is", needUpdate)
 		// currently everything will be running on a single pod as init container
 		if needUpdate {
 
@@ -124,7 +125,7 @@ func (r *AbsurdCIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 				fmt.Println(err)
 			}
-			fmt.Println("Test Pod Created")
+			//fmt.Println("Test Pod Created")
 		} else {
 			if needCrUpdate {
 				err := r.Status().Update(ctx, absurdCIconfig)

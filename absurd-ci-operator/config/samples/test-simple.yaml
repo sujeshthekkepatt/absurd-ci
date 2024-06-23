@@ -1,0 +1,56 @@
+apiVersion: batch.api.absurd-ci.xyz/v1
+kind: AbsurdCI
+metadata:
+  labels:
+    app.kubernetes.io/name: absurdci
+    app.kubernetes.io/instance: absurdci-sample
+    app.kubernetes.io/part-of: absurd-ci-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: absurd-ci-operator
+  name: absurdci-sujesh
+  namespace: simple1
+spec:
+  name: ci-pipeline-test-1
+  version: v1.0.0
+  steps:
+    - name: task-11
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "init"
+          command: "git"
+          args:
+            - "clone"
+            - "https://github.com/sujeshthekkepatt/test-docker.git"
+            - "workspace/app"
+      runAfter: ""
+      secretName: docker-config-secret
+    - name: task-22
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "list"
+          command: "ls"
+          args:
+            # - "clone"
+            # - "https://github.com/sujeshthekkepatt/test-docker.git"
+            - "./workspace/app/apps"
+      runAfter: task-11
+    - name: task-33
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "list"
+          command: "ls"
+          args:
+            # - "clone"
+            # - "https://github.com/sujeshthekkepatt/test-docker.git"
+            - "./workspace/app/apps"
+      runAfter: task-22
+    - name: task-44
+      executor: sujeshthekkepatt/absurd-ci-node-executor:v1.0.0
+      commands:
+        - name: "list"
+          command: "ls"
+          args:
+            # - "clone"
+            # - "https://github.com/sujeshthekkepatt/test-docker.git"
+            - "./workspace/app/apps"
+      runAfter: task-22
